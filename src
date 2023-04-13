@@ -1,0 +1,70 @@
+#define THINGER_SERIAL_DEBUG
+
+#include <ThingerESP8266.h>
+#include "arduino_secrets.h"
+#define rainAnalog A0
+#define rainDigital 5
+#define triggerPin  15
+#define echoPin     13
+int buzzer = 12 ;
+const int bawah=0;
+const int atas=1024;
+
+ThingerESP8266 thing(USERNAME, DEVICE_ID, DEVICE_CREDENTIAL);
+
+void setup() {
+  // open serial for monitoring
+  Serial.begin(115200);
+  pinMode(rainDigital,INPUT);
+  pinMode(triggerPin, OUTPUT);
+  pinMode(echoPin, INPUT);
+  pinMode(buzzer, OUTPUT) ;
+  pinMode(buzzer, OUTPUT) ;
+
+  // add WiFi credentials
+  thing.add_wifi(SSID, SSID_PASSWORD);
+
+  thing["Ultra"] >> [] (pson& out){
+  double duration, jarak;
+  digitalWrite(triggerPin, LOW);
+  delayMicroseconds(2); 
+  digitalWrite(triggerPin, HIGH);
+  delayMicroseconds(10); 
+  digitalWrite(triggerPin, LOW);
+  duration = pulseIn(echoPin, HIGH);
+  jarak = (duration/2) / 29.1;
+  out = jarak;  
+  };
+
+  thing["Rain"] >> [] (pson& out){
+  int rainAnalogVal = analogRead(rainAnalog);
+  int rainDigitalVal = digitalRead(rainDigital);
+
+  int range=map(rainAnalogVal,bawah,atas,0,3);
+  if (range > 2){
+     analogWrite (buzzer, HIGH);
+     delay (500);
+     analogWrite (buzzer, LOW);
+     delay (300);
+   } else { analogWrite (buzzer, LOW);   
+  }
+
+  if(range>2) {  // Tidak hujan
+    digitalWrite(buzzer,LOW);
+    out = "tidak hujan";  
+  }
+  else if(range<=2)
+  {   
+  out = "Terdeteksi Hujan! Segera cek ketinggian air!";
+  }
+
+  delay(1000);
+ 
+  };
+
+  // more details at http://docs.thinger.io/arduino/
+}
+
+void loop() {
+  thing.handle();
+}
